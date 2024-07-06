@@ -1,0 +1,53 @@
+version: '3.7'
+
+networks:
+  fav: 
+    driver: ${NETWORKS_DRIVER}
+
+volumes:
+  mysql:
+    driver: ${VOLUMES_DRIVER}
+  redis:
+    driver: ${VOLUMES_DRIVER}
+  postgres:
+    driver: ${VOLUMES_DRIVER}
+
+services:
+  fav-learn-nginx:
+    build:
+      context: ./docker-local/nginx
+      args:
+        - PUID=${FAV_LEARN_APP_PUID}
+        - PGID=${FAV_LEARN_APP_PGID}
+        - APP_UPSTREAM_CONTAINER=${NGINX_APP_UPSTREAM_CONTAINER}
+        - APP_UPSTREAM_PORT=${NGINX_APP_UPSTREAM_PORT}
+        - CHANGE_SOURCE=${CHANGE_SOURCE}
+    volumes:
+      - ${APP_CODE_PATH_HOST}:${APP_CODE_PATH_CONTAINER}${APP_CODE_CONTAINER_FLAG}
+      - ${NGINX_HOST_LOG_PATH}:/var/log/nginx
+      - ${NGINX_SITES_PATH}:/etc/nginx/sites-available
+      - ${NGINX_SSL_PATH}:/etc/nginx/ssl
+    restart: unless-stopped
+    ports: 
+      - "${NGINX_HTTP_PORT}:80"
+      - "${NGINX_HTTPS_PORT}:443"
+    depends_on:
+        - fav-learn-app
+    networks:
+      - fav
+
+  fav-learn-app:
+    build:
+      context: ./docker-local/app
+      args:
+        - PUID=${FAV_LEARN_APP_PUID}
+        - PGID=${FAV_LEARN_APP_PGID}
+        - INSTALL_SUPERVISOR=${FAV_LEARN_APP_INSTALL_SUPERVISOR}
+        - TZ=${FAV_LEARN_APP_TIMEZONE}
+        - APP_CODE_PATH_CONTAINER=${APP_CODE_PATH_CONTAINER}
+    volumes:
+      - ${APP_CODE_PATH_HOST}:${APP_CODE_PATH_CONTAINER}${APP_CODE_CONTAINER_FLAG}
+    networks:
+      - fav
+
+
